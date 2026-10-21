@@ -1,0 +1,206 @@
+/* Tata letak halaman administratif dengan alur data yang tetap. */
+.app > main:has(.audit-page),
+.app > main:has(.system-page),
+.app > main:has(.business-page) {
+  max-width: 1392px;
+  margin-inline: auto;
+  padding: 8px 24px 32px;
+}
+
+.admin-page-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.audit-page {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.audit-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.audit-toolbar .seg { flex-wrap: nowrap; }
+.audit-toolbar .xdd-btn { min-width: 134px; }
+.audit-count { white-space: nowrap; }
+.audit-card { min-width: 0; padding: 12px 22px; }
+.audit-table { min-width: 760px; table-layout: fixed; }
+.audit-table th:nth-child(1) { width: 120px; }
+.audit-table th:nth-child(2) { width: 140px; }
+.audit-table th:nth-child(3) { width: 180px; }
+.audit-table th:nth-child(5) { width: 70px; }
+.audit-table td:first-child { white-space: nowrap; }
+.audit-table td:nth-child(4) { overflow-wrap: anywhere; }
+.audit-table td:last-child,
+.audit-table th:last-child { text-align: right; }
+
+.system-page {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.system-page > .error { order: -2; }
+.system-health-heading { order: -1; display: flex; flex-direction: column; gap: 4px; }
+.system-health-heading h3,
+.system-section-heading h3,
+.system-pipeline-card h3 { margin: 0; }
+.system-page > .cards-3 {
+  order: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.system-quality-card { order: 1; }
+.system-jobs-card { order: 2; }
+.system-capacity-card { order: 3; }
+.system-pipeline-card { order: 4; }
+
+.system-camera-card {
+  display: flex;
+  min-width: 0;
+  min-height: 310px;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.system-camera-card .recharts-responsive-container { margin-top: auto; }
+.system-camera-card ul { margin: 0; }
+.system-camera-placeholder {
+  display: grid;
+  min-height: 140px;
+  margin-top: auto;
+  place-items: center;
+  border-block: 1px solid var(--line);
+  background:
+    linear-gradient(var(--line) 1px, transparent 1px) 0 25% / 100% 25%,
+    linear-gradient(90deg, transparent, rgba(255,255,255,.025), transparent);
+  text-align: center;
+}
+.system-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.system-section-heading > p { flex: 1 1 420px; text-align: right; }
+.system-quality-card > p,
+.system-jobs-card > .table-wrap,
+.system-capacity-card > .table-wrap { margin-top: 10px; }
+.system-quality-card .av-btn { flex: none; }
+.system-quality-card .av-table,
+.system-jobs-card .av-table,
+.system-capacity-card .av-table { min-width: 760px; }
+.system-quality-card .av-table th.num { text-align: right; }
+.system-quality-card > p { margin-bottom: 8px; }
+.system-jobs-table { table-layout: fixed; }
+.system-jobs-table th:nth-child(1) { width: 24%; }
+.system-jobs-table th:nth-child(2) { width: 17%; }
+.system-jobs-table th:nth-child(3) { width: 27%; }
+.system-jobs-table th:nth-child(4) { width: 17%; }
+.system-jobs-table th:nth-child(5) { width: 15%; }
+.system-jobs-table td:first-child { overflow-wrap: anywhere; }
+.system-jobs-table td:nth-child(2) { white-space: nowrap; }
+.system-job-progress {
+  display: block;
+  height: 6px;
+  margin: 4px 0;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #12181b;
+}
+.system-job-progress i { display: block; height: 100%; border-radius: inherit; background: var(--text); }
+.system-job-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.system-jobs-note { margin-top: 10px; }
+.system-capacity-note { margin-top: 10px; }
+
+.system-capacity-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.system-capacity-kpis .av-kpi { min-width: 0; padding: 18px 20px; }
+.system-capacity-kpis .av-kpi > b { font-size: clamp(30px, 3vw, 40px); font-weight: 300; }
+.system-pipeline-card .av-table td:first-child { width: 180px; }
+
+.business-page {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 14px;
+}
+.business-note { margin: 0; border-radius: 16px; }
+.business-assumptions h3,
+.business-context h3 { margin: 0; }
+.business-form-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+  align-items: start;
+}
+.business-form-grid > * { min-width: 0; }
+.business-form-grid .av-field > span:last-child { min-height: 36px; }
+.business-assumptions > .link { margin-top: 8px; }
+.business-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.business-kpis .av-kpi {
+  min-width: 0;
+  min-height: 146px;
+  overflow: hidden;
+  padding: 18px 20px;
+}
+.business-kpis .av-kpi > b {
+  font-size: clamp(29px, 3vw, 40px);
+  white-space: nowrap;
+}
+.business-context { display: flex; flex-direction: column; gap: 8px; }
+
+@media (max-width: 900px) {
+  .app > main:has(.audit-page),
+  .app > main:has(.system-page),
+  .app > main:has(.business-page) { padding: 8px 16px 24px; }
+  .system-page > .cards-3 { grid-template-columns: minmax(0, 1fr); }
+  .system-capacity-kpis { grid-template-columns: minmax(0, 1fr); }
+  .system-camera-card { min-height: 0; }
+  .business-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .business-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .audit-page { gap: 12px; }
+  .audit-toolbar { align-items: stretch; gap: 8px; }
+  .audit-toolbar .seg { width: 100%; overflow-x: auto; }
+  .audit-toolbar .seg button { flex: 1 0 auto; padding-inline: 12px; }
+  .audit-toolbar .xdd { flex: 1 1 calc(50% - 4px); min-width: 0; }
+  .audit-toolbar .xdd-btn { width: 100%; min-width: 0; }
+  .audit-count { align-self: center; }
+  .audit-card { padding: 8px 14px; }
+  .system-page { gap: 12px; }
+  .system-page > .av-card,
+  .system-camera-card { padding: 18px 16px; }
+  .system-section-heading { flex-direction: column; }
+  .system-section-heading > p { flex-basis: auto; text-align: left; }
+  .system-quality-card .av-btn { width: 100%; }
+  .system-capacity-card .seg { width: 100%; overflow-x: auto; flex-wrap: nowrap; }
+  .system-capacity-card .seg button { flex: 0 0 auto; padding-inline: 12px; }
+  .business-page { gap: 12px; }
+  .business-assumptions,
+  .business-context { padding: 18px 16px; }
+  .business-form-grid,
+  .business-kpis { grid-template-columns: minmax(0, 1fr); }
+  .business-form-grid .av-field > span:last-child { min-height: 0; }
+  .business-kpis .av-kpi { min-height: 0; }
+  .business-kpis .av-kpi > b { white-space: normal; overflow-wrap: anywhere; }
+}

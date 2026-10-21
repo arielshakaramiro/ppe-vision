@@ -1,0 +1,27 @@
+# Reverse proxy HTTPS untuk dashboard.
+# DOMAIN diambil dari .env. Dengan domain publik (misalnya k3.perusahaan.co.id) Caddy otomatis
+# meminta sertifikat Let's Encrypt. Untuk jaringan lokal tanpa domain, isi DOMAIN=localhost atau
+# alamat IP: Caddy memakai sertifikat internalnya sendiri (browser akan meminta konfirmasi sekali).
+{$DOMAIN:localhost} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "same-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	# Upload video dikirim per potongan kecil (uploads.chunk_mb, bawaan 10 MB), jadi body tidak
+	# pernah besar. Batasi 32 MB untuk memberi ruang overhead tanpa menerima body raksasa.
+	request_body {
+		max_size 32MB
+	}
+
+	# Stream MJPEG dan respons agent tidak boleh ditahan buffer
+	reverse_proxy app:8000 {
+		flush_interval -1
+	}
+}

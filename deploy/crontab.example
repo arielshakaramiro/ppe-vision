@@ -1,0 +1,15 @@
+# Contoh crontab host produksi. Ganti /opt/apd-vision dengan path repo di server.
+# Production compose sudah punya service worker yang menjalankan backup+retensi harian.
+# Cron ini fallback/manual belt-and-suspenders bila worker dimatikan.
+
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Healthcheck lokal tiap 5 menit. Ganti DOMAIN sesuai .env.
+*/5 * * * * cd /opt/apd-vision && curl -fsSk --resolve "$DOMAIN:443:127.0.0.1" "https://$DOMAIN/api/healthz" >/dev/null
+
+# Retensi harian 02:00 lewat container app.
+0 2 * * * cd /opt/apd-vision && docker compose --env-file .env -f deploy/docker-compose.prod.yml exec -T app python -m scripts.retention >> backend/data/retention.log 2>&1
+
+# Backup harian 03:00. Backup tersimpan di backend/data/backups sesuai backend/config.yaml.
+0 3 * * * cd /opt/apd-vision && sh deploy/backup.sh >> backend/data/backup.log 2>&1

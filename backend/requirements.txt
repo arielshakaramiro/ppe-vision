@@ -1,0 +1,12 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+sqlmodel>=0.0.22
+pyyaml>=6.0
+numpy>=1.26
+opencv-python-headless>=4.10
+httpx>=0.27
+# anthropic>=0.40   # opsional: hanya jika LLM_PROVIDER=anthropic (bukan mode full lokal)
+ultralytics>=8.3
+lap>=0.5.12              # dibutuhkan ByteTrack
+tzdata>=2024.1           # data zona waktu (Asia/Jakarta) untuk image Docker slim
+cryptography>=43.0       # enkripsi URL kamera (Fernet) di app/camera_store.py

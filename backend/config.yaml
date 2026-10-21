@@ -1,0 +1,140 @@
+# Konfigurasi utama APD Vision.
+# Semua koordinat zona dinormalisasi 0..1 terhadap lebar/tinggi frame.
+
+camera:
+  id: CAM-01
+  # "demo" = video uji di data/videos/, atau path file, atau URL RTSP
+  source: data/videos/11.mp4
+  loop: true
+  # realtime: true            # putar file sesuai fps aslinya (default: true jika loop)
+  # start_time: 2026-09-30T08:00   # isi untuk rekaman: waktu event = waktu di dalam video
+
+models:
+  ppe: weights/best.pt          # YOLO hasil fine-tune (SH17 + Roboflow + data sendiri)
+  version: v2                  # naikkan (v2, v3, ...) setiap model dilatih ulang; dicatat di tiap event
+  pose: weights/yolo11n-pose.pt   # pretrained COCO, diunduh otomatis ke folder weights/ saat pertama dipakai
+  device: mps                  # mps (Mac M1), cuda, atau cpu
+  imgsz: 640
+  ppe_conf: 0.35
+  ppe_conf_item:                # ambang conf per-item; item tak tercantum mengikuti ppe_conf
+    helmet: 0.78                # helm rawan false positive (kepala telanjang di cahaya redup dikira helm); minta keyakinan lebih tinggi
+  pose_conf: 0.30              # lebih sensitif agar pekerja yang terhalang sebagian tetap keluar sebagai raw pose
+  ppe_iou: 0.45                # NMS IoU detektor APD
+  pose_iou: 0.85              # NMS pose lebih longgar agar pekerja berdempetan/terhalang tidak saling menekan
+  half: false                 # inferensi FP16 (cuda/mps lebih cepat; biarkan false jika ragu)
+  ppe_every_n: 4               # jalankan detektor APD tiap N frame (2-3 menaikkan FPS)
+
+# Tracking ID pekerja. Re-entry opsional mengurangi double-count saat pekerja keluar lalu masuk lagi.
+tracking:
+  track_buffer: 30            # frame ByteTrack menahan ID yang hilang sebelum dibuang
+  # match_thresh: 0.8
+  reentry_enabled: true       # sambungkan ID baru ke track yang baru hilang/berganti di posisi serupa agar pekerja tidak terhitung ganda
+  reentry_max_gap_frames: 90  # gap maksimum (frame) untuk dianggap orang yang sama
+  reentry_min_iou: 0.15       # IoU minimum kotak untuk mencocokkan re-entry
+  reentry_max_center_dist: 1.5 # atau jarak pusat (relatif ukuran kotak) di bawah ini
+  duplicate_active_min_iou: 0.80 # gabungkan ID aktif bersamaan hanya jika box hampir sama
+  duplicate_active_max_center_dist: 0.25
+
+# Nama kelas di model PPE -> item APD. Sesuaikan dengan data.yaml hasil training.
+class_map:
+  helmet: [Helmet, helmet, Hardhat]
+  vest: [Safety-vest, vest, Safety Vest]
+  gloves: [Gloves, gloves, Glove]
+  shoes: [Shoes, shoes, Boots]
+
+association:
+  min_ioa: 0.40               # bagian kotak APD yang harus masuk wilayah tubuh
+  keypoint_conf: 0.50         # keypoint dianggap terlihat di atas nilai ini
+  hand_radius: 0.07           # radius wilayah tangan, relatif tinggi orang
+  foot_radius: 0.07
+
+overlay:
+  raw_ppe_boxes: false         # true hanya untuk debug model; false agar layar live tidak penuh kotak APD mentah
+  check_regions: false         # true hanya untuk debug asosiasi tubuh; false agar kotak estimasi tangan/kaki tidak membingungkan operator
+  recorded_hold_inference_frames: 30 # video rekaman: tahan overlay track aktif saat deteksi kosong singkat agar kotak tidak berkedip
+  recorded_hold_seconds: 0.8    # video rekaman: tahan overlay singkat saat detector/tracker drop agar kotak tidak kedip tanpa menempel lama
+  recorded_smooth_alpha: 0.65  # video rekaman: haluskan perpindahan kotak tetapi tetap responsif mengikuti gerakan
+  recorded_match_min_iou: 0.20 # video rekaman: cocokkan snapshot lama saat tracker memberi ID baru di posisi serupa
+  recorded_match_max_center_dist: 0.80
+
+hysteresis:
+  decay: 0.90
+  present_threshold: 1.0      # skor >= ini -> APD terpakai
+  missing_threshold: -1.5     # skor <= ini -> APD tidak dipakai
+  min_evaluations: 5
+  unknown_after_frames: 45    # tanpa bukti selama ini -> status tidak pasti
+  event_min_frames: 8         # pelanggaran harus stabil sekian frame
+  uncertain_min_frames: 30    # status tidak pasti butuh lebih lama sebelum masuk antrean review
+  event_close_grace_frames: 12 # tahan event aktif saat deteksi APD drop singkat agar evidence tidak berulang
+  track_lost_frames: 30
+
+zones:
+  - name: Area Produksi
+    polygon: [[0, 0], [1, 0], [1, 1], [0, 1]]
+    # Kamera demo/top-down: helm+rompi = pelanggaran keras.
+    # Sarung tangan/sepatu sering kecil/tertutup; aktifkan per zona bila kamera mendukung.
+    required: [helmet, vest]
+
+evidence:
+  dir: data/evidence
+  blur_faces: true
+  clip:
+    enabled: false            # dimatikan agar loop simulasi tidak memproduksi ribuan video klip yang memenuhi disk
+    before_s: 2
+    after_s: 3
+    width: 640                # klip diperkecil supaya ringan
+
+quality:
+  enabled: true               # catat kecerahan, ketajaman, dan confidence per menit
+  window_min: 30              # periode terakhir yang dibandingkan dengan baseline
+  baseline_days: 7
+  min_brightness: 40          # di bawah ini kamera dianggap terlalu gelap
+  max_sharpness_drop: 0.5     # ketajaman turun > 50% dari baseline = buram / lensa kotor
+  max_conf_drop: 0.2          # confidence orang turun > 20% dari baseline
+  alert_cooldown_s: 3600
+
+# Shift kerja untuk analitik per shift. Shift boleh melewati tengah malam.
+shifts:
+  - {name: Pagi, start: "07:00", end: "15:00"}
+  - {name: Siang, start: "15:00", end: "23:00"}
+  - {name: Malam, start: "23:00", end: "07:00"}
+
+alerts:
+  telegram: true              # aktif hanya jika TELEGRAM_BOT_TOKEN dan TELEGRAM_CHAT_ID di-set
+  cooldown_s: 120             # jeda minimum alert untuk pekerja yang sama di kamera yang sama
+
+# Pembatas login gagal (lihat app/auth.py LoginThrottle)
+login_throttle:
+  window_min: 15      # jendela hitungan
+  per_ip_user: 5      # gagal dari satu perangkat untuk satu username -> pasangan itu dikunci
+  per_ip: 20          # gagal dari satu perangkat ke username mana pun -> perangkat dikunci
+  per_user: 50        # gagal ke satu username dari semua perangkat -> username dikunci
+
+# Dipakai scripts/retention.py (berjalan otomatis di worker). Event yang belum ditinjau tidak dihapus.
+retention:
+  evidence_days: 90           # hapus file foto/klip setelah sekian hari (baris event tetap disimpan)
+  quality_days: 30            # hapus statistik kualitas kamera setelah sekian hari
+  video_days: 14              # hapus file video dan upload kedaluwarsa setelah sekian hari
+
+# Backup harian oleh scripts.worker. Simpan folder backup di volume data yang sama.
+backup:
+  enabled: true
+  dir: data/backups
+  max_days: 7                 # hapus arsip backup yang lebih tua dari sekian hari
+
+uploads:
+  max_gb: 20                  # batas ukuran file upload
+  reserve_gb: 10              # sisa disk minimal yang harus dijaga
+  chunk_mb: 10                # batas ukuran per potongan upload; lebih besar ditolak 413
+
+pipeline:
+  min_rate_per_camera: 5      # batas aman pemeriksaan per detik per kamera; di bawah ini memicu peringatan
+
+stream:
+  target_fps: 24              # FPS target tampilan MJPEG; inferensi YOLO tetap adaptif sesuai kemampuan hardware
+  overlay_max_age_frames: 12   # tahan overlay segar sekitar 0,5 detik agar bounding box tidak berkedip saat inferensi drop singkat
+  display_raw_when_stale: true # isi jeda inferensi dengan frame mentah agar video halus tanpa kotak meleset
+  blur_faces_live: false       # blur wajah KHUSUS tampilan live. false = video mulus, wajah terlihat di layar operator.
+                               # Foto evidence & klip video TETAP ikut evidence.blur_faces (tidak terpengaruh flag ini).
+
+timezone: Asia/Jakarta

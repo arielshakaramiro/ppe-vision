@@ -1,0 +1,8 @@
+# Tambahan development/test exact di atas requirements.lock.
+httpcore2==2.13.1
+httpx2==2.13.1
+iniconfig==2.3.0
+pluggy==1.6.0
+Pygments==2.21.0
+pytest==9.1.1
+truststore==0.10.5

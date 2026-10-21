@@ -1,0 +1,121 @@
+# Produksi: dashboard hanya bisa diakses lewat HTTPS (Caddy). Port 8000 aplikasi tidak dibuka ke luar.
+#   cp .env.example .env    # isi DOMAIN, DASHBOARD_USER, DASHBOARD_PASSWORD, lalu dari root repo:
+#   docker compose --env-file .env -f deploy/docker-compose.prod.yml up -d --build
+# --env-file wajib: tanpa itu Compose mencari deploy/.env dan DOMAIN jatuh ke "localhost".
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  live-permissions:
+    image: apd-vision:prod
+    build: ..
+    user: root
+    command: ["sh", "-c", "chown -R ppe:ppe /tmp/ppe_live"]
+    volumes:
+      - ppe_live:/tmp/ppe_live
+
+  app:
+    image: apd-vision:prod
+    build: ..
+    restart: unless-stopped
+    logging: *default-logging
+    env_file: ../.env
+    environment:
+      PRODUCTION: "1"                            # aktifkan mode produksi (fail-fast security validation & guard zona)
+      RUN_PIPELINE: "0"                          # produksi menjalankan pipeline di service worker, bukan app, agar tidak dobel
+      ANALYSIS_JOB_RUNNER: "0"                   # job rekaman juga dijalankan worker; abaikan override development dari .env
+      MODEL_DEVICE: cpu
+      COOKIE_SECURE: "1"                         # cookie sesi hanya dikirim lewat HTTPS
+      TRUSTED_PROXIES: "172.30.80.0/24"          # subnet jaringan "internal" di bawah, tempat Caddy berada
+      ALLOWED_ORIGINS: ""                        # hanya origin dashboard itu sendiri
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}   # Ollama berjalan di host, bukan di container
+      OLLAMA_READ_TIMEOUT_S: "90"
+      OLLAMA_NUM_CTX: "3072"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"     # Linux: supaya container bisa menjangkau Ollama di host
+    expose:
+      - "8000"
+    depends_on:
+      live-permissions:
+        condition: service_completed_successfully
+    networks:
+      - internal
+    volumes:
+      - ../backend/data:/app/backend/data
+      - ../backend/weights:/app/backend/weights
+      - ../backend/config.yaml:/app/backend/config.yaml:ro
+      - ppe_live:/tmp/ppe_live
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/healthz', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  worker:
+    image: apd-vision:prod
+    build: ..
+    restart: unless-stopped
+    logging: *default-logging
+    command: ["python", "-m", "scripts.worker"]
+    env_file: ../.env
+    environment:
+      PRODUCTION: "1"
+      MODEL_DEVICE: cpu
+      COOKIE_SECURE: "1"
+      TRUSTED_PROXIES: "172.30.80.0/24"
+      ALLOWED_ORIGINS: ""
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      OLLAMA_READ_TIMEOUT_S: "90"
+      OLLAMA_NUM_CTX: "3072"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      app:
+        condition: service_started
+      live-permissions:
+        condition: service_completed_successfully
+    networks:
+      - internal
+    volumes:
+      - ../backend/data:/app/backend/data
+      - ../backend/weights:/app/backend/weights
+      - ../backend/config.yaml:/app/backend/config.yaml:ro
+      - ppe_live:/tmp/ppe_live
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.worker_health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}               # dari --env-file .env; Caddy tidak perlu melihat secret lain
+    networks:
+      - internal
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+networks:
+  internal:
+    ipam:
+      config:
+        - subnet: 172.30.80.0/24   # tetap, supaya TRUSTED_PROXIES selalu cocok
+
+volumes:
+  caddy_data:
+  caddy_config:
+  ppe_live:

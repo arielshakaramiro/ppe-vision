@@ -1,0 +1,47 @@
+# Secret & environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+
+# Node / frontend build
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+
+# Data runtime & model (tidak di-commit; dibuat/diunduh otomatis)
+# backend/data/* menangkap evidence/, videos/, uploads/, backups/, ppe.db — kecuali regulations/
+backend/data/*
+!backend/data/regulations/
+*.db
+*.sqlite
+*.sqlite3
+backend/weights/*.pt
+*.pt
+
+# Artefak training & evaluasi lokal
+runs/
+datasets/
+output/
+*.zip
+
+# Artefak test e2e (Playwright)
+frontend/e2e/screenshots/
+frontend/e2e/screens/
+frontend/e2e/.results/
+frontend/playwright-report/
+frontend/test-results/
+test-results/
+playwright-report/
+blob-report/
+
+# OS
+.DS_Store
+
+# Dokumentasi internal (tidak masuk repo)
+docs/

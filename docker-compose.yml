@@ -1,0 +1,18 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    cpus: 6.0                     # batasi 6 dari 8 core agar macOS/browser tetap responsif
+    environment:
+      MODEL_DEVICE: cpu            # Docker di Mac tidak bisa memakai GPU M1 (mps)
+      OMP_NUM_THREADS: "6"        # PyTorch default pakai semua core per inferensi; batasi ke 6
+      MKL_NUM_THREADS: "6"
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}   # Ollama di host
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./backend/data:/app/backend/data
+      - ./backend/weights:/app/backend/weights
+      - ./backend/config.yaml:/app/backend/config.yaml

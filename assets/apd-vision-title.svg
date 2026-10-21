@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 220" role="img" aria-labelledby="title description">
+  <title id="title">APD Vision</title>
+  <desc id="description">Judul APD Vision bergerak perlahan di atas latar graphite.</desc>
+  <style>
+    .letter { fill: #f3f5f3; font: 700 92px Arial, sans-serif; letter-spacing: -5px; }
+    .subtitle { fill: #aeb8b6; font: 500 16px Arial, sans-serif; letter-spacing: 4px; }
+    .apd { animation: move-apd 4s ease-in-out infinite alternate; }
+    .vision { animation: move-vision 4s ease-in-out infinite alternate; }
+    .line { animation: sweep 4s ease-in-out infinite alternate; }
+    @keyframes move-apd { from { transform: translateX(-5px); } to { transform: translateX(5px); } }
+    @keyframes move-vision { from { transform: translateX(5px); } to { transform: translateX(-5px); } }
+    @keyframes sweep { from { transform: translateX(-35px); } to { transform: translateX(35px); } }
+    @media (prefers-reduced-motion: reduce) {
+      .apd, .vision, .line { animation: none; }
+    }
+  </style>
+  <rect width="960" height="220" rx="24" fill="#0b1013"/>
+  <path d="M36 52V36h16 M908 36h16v16 M36 168v16h16 M908 184h16v-16" fill="none" stroke="#75807e" stroke-width="2"/>
+  <g text-anchor="middle">
+    <text class="letter apd" x="331" y="120">APD</text>
+    <text class="letter vision" x="635" y="120">Vision</text>
+    <text class="subtitle" x="480" y="164">PEMANTAUAN KESELAMATAN KERJA</text>
+  </g>
+  <path d="M370 187h220" stroke="#313c3b" stroke-width="2"/>
+  <path class="line" d="M450 187h60" stroke="#f3f5f3" stroke-width="2"/>
+</svg>
