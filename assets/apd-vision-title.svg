@@ -1,31 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 220" role="img" aria-labelledby="title description">
   <title id="title">APD Vision</title>
-  <desc id="description">APD Vision workplace safety monitoring, with a gently floating title and a moving line beneath it.</desc>
-  <style>
-    .title { fill: #f3f5f3; font: 700 82px Arial, Helvetica, sans-serif; letter-spacing: -3px; animation: float 5s ease-in-out infinite; }
-    .subtitle { fill: #aeb8b6; font: 600 14px Arial, Helvetica, sans-serif; letter-spacing: 3px; }
-    .scanner { animation: scan 5s ease-in-out infinite alternate; }
-    .corners { animation: breathe 5s ease-in-out infinite; }
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-4px); }
-    }
-    @keyframes scan {
-      from { transform: translateX(-96px); }
-      to { transform: translateX(96px); }
-    }
-    @keyframes breathe {
-      0%, 100% { opacity: .6; }
-      50% { opacity: 1; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .title, .scanner, .corners { animation: none; }
-    }
-  </style>
+  <desc id="description">APD Vision workplace safety monitoring, with a gently floating title and a scanning line beneath it.</desc>
   <rect x="0.5" y="0.5" width="959" height="219" rx="23.5" fill="#0b1013" stroke="#303a3a"/>
-  <path class="corners" d="M40 56V40h16 M904 40h16v16 M40 164v16h16 M904 180h16v-16" fill="none" stroke="#677471" stroke-width="1.5"/>
-  <text class="title" x="480" y="112" text-anchor="middle">APD Vision</text>
-  <text class="subtitle" x="480" y="157" text-anchor="middle">WORKPLACE SAFETY MONITORING</text>
+
+  <path d="M40 56V40h16 M904 40h16v16 M40 164v16h16 M904 180h16v-16" fill="none" stroke="#677471" stroke-width="1.5">
+    <animate attributeName="opacity" values="0.55;1;0.55" dur="4.5s" repeatCount="indefinite"/>
+  </path>
+
+  <g text-anchor="middle">
+    <text x="480" y="112" fill="#f3f5f3" font-family="Arial, Helvetica, sans-serif" font-size="82" font-weight="700" letter-spacing="-3">
+      APD Vision
+      <animateTransform attributeName="transform" type="translate" values="0 0; 0 -4; 0 0" dur="5s" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.4 0 0.6 1; 0.4 0 0.6 1" repeatCount="indefinite"/>
+    </text>
+    <text x="480" y="157" fill="#aeb8b6" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="600" letter-spacing="3">WORKPLACE SAFETY MONITORING</text>
+  </g>
+
   <path d="M356 184h248" stroke="#303a3a" stroke-width="2"/>
-  <path class="scanner" d="M456 184h48" stroke="#f3f5f3" stroke-width="2"/>
+  <path d="M356 184h48" stroke="#f3f5f3" stroke-width="2" stroke-linecap="round">
+    <animate attributeName="d"
+             values="M356 184h48; M556 184h48; M356 184h48"
+             dur="5s" calcMode="spline" keyTimes="0;0.5;1"
+             keySplines="0.45 0 0.55 1; 0.45 0 0.55 1" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.2;1;0.2" dur="5s" repeatCount="indefinite"/>
+  </path>
 </svg>
