@@ -17,7 +17,12 @@ jobs:
         with:
           fetch-depth: 2
       - name: Periksa whitespace commit
-        run: git diff --check HEAD^ HEAD
+        run: |
+          if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+            git diff --check HEAD^ HEAD
+          else
+            echo "Commit pertama (tanpa parent); lewati pemeriksaan whitespace diff."
+          fi
       - name: Validasi konfigurasi Compose
         run: |
           cp .env.example .env
