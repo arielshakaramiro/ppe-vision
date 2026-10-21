@@ -4,9 +4,7 @@
   <p><strong>From camera feeds to reviewable PPE evidence.</strong></p>
 </div>
 
-## Demo video
-
-> **A demo video will be added here.** Once the video is uploaded to GitHub, add its attachment URL in this section. This README does not include a sample video or a placeholder link that cannot be opened.
+https://github.com/user-attachments/assets/452c575c-35f2-4ce4-890a-d8fd45658670
 
 APD Vision monitors the use of **helmets, vests, gloves, and shoes** in video footage. It associates detections with tracked workers, applies zone-specific PPE rules, and records events with photographic evidence and short clips. The dashboard provides Live monitoring, Analytics, Evidence, recorded-video analysis, and reports; the K3 Agent answers questions in Indonesian using available data.
 
