@@ -1,87 +1,87 @@
 <div align="center">
-  <img src="assets/apd-vision-title.svg" alt="APD Vision — pemantauan keselamatan kerja" width="960">
+  <img src="assets/apd-vision-title.svg" alt="APD Vision — workplace safety monitoring" width="960">
 
-  <p><strong>Pemantauan kepatuhan APD dari kamera dan rekaman, dengan bukti yang dapat ditinjau.</strong></p>
+  <p><strong>From camera feeds to reviewable PPE evidence.</strong></p>
 </div>
 
-## Video demo
+## Demo video
 
-> **Video demo akan ditambahkan di sini.** Setelah video diunggah ke GitHub, tempel URL lampirannya di bagian ini. README tidak menyertakan video contoh atau tautan sementara yang tidak dapat dibuka.
+> **A demo video will be added here.** Once the video is uploaded to GitHub, add its attachment URL in this section. This README does not include a sample video or a placeholder link that cannot be opened.
 
-APD Vision memantau penggunaan **helm, rompi, sarung tangan, dan sepatu** dari video. Sistem menghubungkan hasil deteksi ke pekerja yang terlacak, menerapkan aturan APD per zona, lalu menyimpan event, foto evidence, dan klip pendek. Dashboard menyediakan Live, Analitik, Evidence, analisis rekaman, dan laporan; Agent K3 menjawab pertanyaan berbahasa Indonesia menggunakan data yang tersedia.
+APD Vision monitors the use of **helmets, vests, gloves, and shoes** in video footage. It associates detections with tracked workers, applies zone-specific PPE rules, and records events with photographic evidence and short clips. The dashboard provides Live monitoring, Analytics, Evidence, recorded-video analysis, and reports; the K3 Agent answers questions in Indonesian using available data.
 
-> **Batas model:** Helm dan rompi menjadi syarat pelanggaran bawaan. Deteksi sarung tangan dan sepatu masih lemah pada objek kecil, jauh, atau tertutup; keduanya tidak dijadikan syarat pelanggaran keras secara bawaan. Kelas `shoes` berarti sepatu tertutup, **bukan** sertifikasi sepatu safety. Hasil sistem perlu ditinjau petugas, bukan diperlakukan sebagai keputusan keselamatan otomatis.
+> **Model limitation:** Helmets and vests are the default requirements that can trigger violations. Detection of gloves and shoes remains weak for small, distant, or occluded objects; neither is a strict violation trigger by default. The `shoes` class means closed-toe footwear, **not** certified safety footwear. A safety officer must review the results; they must not be treated as automated safety decisions.
 
-## Kemampuan utama
+## Key capabilities
 
-| Area | Kemampuan |
+| Area | Capabilities |
 |---|---|
-| Pemantauan | Stream RTSP/HTTP, video simulasi, beberapa kamera dengan scheduler inferensi bersama, sambung ulang saat sumber terputus. |
-| Rekaman | Upload bertahap, video di server, analisis dengan waktu mulai rekaman, job yang dapat dijeda/dilanjutkan/dibatalkan. Data simulasi dibedakan dari data live dan rekaman. |
-| Deteksi | YOLO pose + detektor APD, asosiasi APD ke bagian tubuh, tracking ByteTrack, aturan per zona, serta status **patuh / pelanggaran / tidak pasti** dengan hysteresis. |
-| Bukti | Foto beranotasi, crop pekerja, klip singkat, blur wajah, hash SHA-256, review supervisor, dan jejak audit. |
-| Analitik & tindakan | Kepatuhan per APD/kamera/zona, menit paparan, intervensi sebelum–sesudah, kualitas kamera, dan laporan K3 siap cetak. |
-| Agent K3 | Tanya jawab bahasa Indonesia; angka diambil melalui tool baca-saja. Ollama lokal dan router offline tersedia, penyedia cloud bersifat opsional. |
-| Akses & alert | Peran `viewer`, `supervisor`, `admin`; sesi pengguna, audit aktivitas, dan notifikasi Telegram opsional. |
+| Monitoring | RTSP/HTTP streams, simulated video, multiple cameras sharing an inference scheduler, and automatic reconnection when a source disconnects. |
+| Recordings | Resumable uploads, server-side video files, analysis using the recording's start time, and jobs that can be paused, resumed, or cancelled. Simulated data is distinguished from live and recorded data. |
+| Detection | YOLO pose and a PPE detector, PPE-to-body-part association, ByteTrack tracking, zone-specific rules, and **compliant / violation / uncertain** states with hysteresis. |
+| Evidence | Annotated photographs, worker crops, short clips, face blurring, SHA-256 hashes, supervisor review, and an audit trail. |
+| Analytics and action | Compliance by PPE item, camera, and zone; exposure minutes; before-and-after intervention analysis; camera quality; and printable K3 reports. |
+| K3 Agent | Indonesian-language questions and answers, with figures obtained through read-only tools. Local Ollama and an offline router are available; cloud providers are optional. |
+| Access and alerts | `viewer`, `supervisor`, and `admin` roles; user sessions, activity audits, and optional Telegram notifications. |
 
-### Alur deteksi
-
-```text
-Kamera / video → deteksi orang + keypoint → deteksi APD → asosiasi ke pekerja
-               → aturan APD per zona → status stabil → event + evidence → dashboard / alert
-```
-
-APD hanya dikaitkan dengan pekerja bila posisinya sesuai wilayah tubuh. Bukti yang belum cukup menghasilkan status **tidak pasti**, bukan otomatis pelanggaran. Review *false positive* memengaruhi statistik kepatuhan. Identitas pekerja adalah ID tracking per sesi kamera, bukan pengenalan wajah.
-
-## Arsitektur singkat
-
-- **Frontend:** React 18, TypeScript, Vite; dashboard dan API menggunakan origin yang sama saat produksi.
-- **Backend:** FastAPI, SQLModel, SQLite; melayani API, stream MJPEG, autentikasi, evidence, dan frontend hasil build.
-- **Pipeline:** YOLO11n-pose, model APD fine-tune, OpenCV, ByteTrack. Worker produksi memisahkan inferensi kamera, job rekaman, notifikasi, backup, dan retensi dari proses API.
-- **Penyimpanan:** database dan evidence di `backend/data/`, bobot model di `backend/weights/`; data runtime dan secret tidak disimpan dalam Git.
-- **Produksi:** Docker Compose dengan Caddy untuk HTTPS; pipeline berbagi status dan frame live dengan API melalui volume.
-
-Rincian modul, alur data, tabel, keamanan, serta konvensi kode ada di **[dokumentasi teknis](TECHNICAL_OVERVIEW.md)**.
+### Detection flow
 
 ```text
-backend/     API, pipeline computer vision, worker, skrip, dan pengujian
-frontend/    dashboard React dan pengujian Playwright
-training/    notebook dan utilitas persiapan/evaluasi model
-deploy/      Compose produksi, Caddy, backup, dan pemeriksaan deploy
-assets/      aset README
+Camera / video → person + keypoint detection → PPE detection → worker association
+               → zone-specific PPE rules → stable state → event + evidence → dashboard / alert
 ```
 
-## Menjalankan secara lokal
+A PPE item is associated with a worker only when it is located in the appropriate body region. Insufficient evidence produces an **uncertain** state, not an automatic violation. False-positive reviews affect compliance statistics. A worker's identity is a tracking ID within a camera session, not face recognition.
 
-### Prasyarat
+## Architecture at a glance
 
-- Python 3.11, Node.js 20+, dan npm.
-- Bobot APD `backend/weights/best.pt` serta bobot pose `backend/weights/yolo11n-pose.pt` untuk pipeline kamera. Bobot tidak ada di Git; bobot pose dapat diunduh oleh Ultralytics saat pertama digunakan.
-- Ollama opsional untuk Agent K3; tanpa Ollama, pertanyaan yang didukung router offline tetap dapat dijawab.
+- **Frontend:** React 18, TypeScript, and Vite; the dashboard and API share an origin in production.
+- **Backend:** FastAPI, SQLModel, and SQLite; serves the API, MJPEG stream, authentication, evidence, and built frontend.
+- **Pipeline:** YOLO11n-pose, a fine-tuned PPE model, OpenCV, and ByteTrack. A separate production worker handles camera inference, recording jobs, notifications, backups, and retention outside the API process.
+- **Storage:** The database and evidence live under `backend/data/`, and model weights under `backend/weights/`; runtime data and secrets are not stored in Git.
+- **Production:** Docker Compose with Caddy for HTTPS; the pipeline shares live status and frames with the API through a volume.
+
+See the **[technical overview](TECHNICAL_OVERVIEW.md)** for module details, data flow, tables, security, and coding conventions.
+
+```text
+backend/     API, computer vision pipeline, worker, scripts, and tests
+frontend/    React dashboard and Playwright tests
+training/    notebooks and model preparation/evaluation utilities
+deploy/      production Compose, Caddy, backups, and deployment checks
+assets/      README assets
+```
+
+## Run locally
+
+### Prerequisites
+
+- Python 3.11, Node.js 20+, and npm.
+- PPE weights at `backend/weights/best.pt` and pose weights at `backend/weights/yolo11n-pose.pt` for the camera pipeline. Weights are not in Git; Ultralytics can download the pose weights on first use.
+- Ollama is optional for the K3 Agent; questions supported by the offline router can still be answered without it.
 
 ### Backend
 
-Dari root repo:
+From the repository root:
 
 ```bash
 cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt -r requirements-dev.txt
-# Salin konfigurasi contoh hanya jika belum ada .env; jangan timpa secret lokal.
+# Copy the example config only if .env does not exist; do not overwrite local secrets.
 if [ ! -f ../.env ]; then cp ../.env.example ../.env; fi
-# Sesuaikan ../.env sebelum membuat akun.
+# Configure ../.env before creating an account.
 python -m scripts.users add admin-lokal --role admin
 uvicorn app.main:app --reload --port 8000
 ```
 
-Sunting `.env` sesuai lingkungan sebelum menjalankan server. Untuk memakai model lokal Agent K3, jalankan Ollama dan unduh model yang dikonfigurasi (misalnya `ollama pull qwen2.5:7b`). Di macOS Apple Silicon, backend native dapat memakai `mps`; Docker di Mac memakai CPU.
+Adjust `.env` for your environment before starting the server. To use a local model for the K3 Agent, start Ollama and download the configured model (for example, `ollama pull qwen2.5:7b`). On Apple Silicon macOS, the native backend can use `mps`; Docker on Mac uses the CPU.
 
-> **Jangan menjalankan `scripts.seed_demo --force` pada database berisi data nyata.** Untuk data contoh, gunakan database terpisah lalu jalankan `python -m scripts.seed_demo` tanpa `--force`.
+> **Do not run `scripts.seed_demo --force` against a database containing real data.** To populate sample data, use a separate database and run `python -m scripts.seed_demo` without `--force`.
 
 ### Frontend
 
-Di terminal lain, dari root repo:
+In another terminal, from the repository root:
 
 ```bash
 cd frontend
@@ -89,51 +89,51 @@ npm ci
 npm run dev
 ```
 
-Buka **http://localhost:5173**. Vite meneruskan `/api` dan `/evidence` ke backend di port 8000. Untuk build produksi: `npm run build`; FastAPI menyajikan hasil `frontend/dist` dari http://localhost:8000.
+Open **http://localhost:5173**. Vite proxies `/api` and `/evidence` to the backend on port 8000. For a production build, run `npm run build`; FastAPI serves `frontend/dist` at http://localhost:8000.
 
-### Mengaktifkan pipeline kamera
+### Enable the camera pipeline
 
-1. Letakkan model APD aktif di `backend/weights/best.pt` dan periksa `models.ppe` serta `class_map` di `backend/config.yaml`.
-2. Daftarkan kamera/video lewat dashboard, atau arahkan sumber di konfigurasi untuk penggunaan lokal.
-3. Jalankan backend dengan `RUN_PIPELINE=1` pada lingkungan development. Alternatif untuk memproses satu rekaman tanpa server: dari folder `backend/`, jalankan `python -m scripts.process_video --source data/videos/rekaman.mp4 --start 2026-10-20T08:00` (sesuaikan path dan waktu mulai rekaman).
+1. Place the active PPE model at `backend/weights/best.pt` and check `models.ppe` and `class_map` in `backend/config.yaml`.
+2. Register a camera or video through the dashboard, or configure a source for local use.
+3. Run the backend with `RUN_PIPELINE=1` during development. Alternatively, to process one recording without the server, run `python -m scripts.process_video --source data/videos/rekaman.mp4 --start 2026-10-20T08:00` from `backend/` (adjust the path and recording start time).
 
-### Docker demo dan produksi
+### Docker demo and production
 
 ```bash
-# Demo lokal (CPU); siapkan .env dari .env.example bila belum ada,
-# lalu atur akun awal dan konfigurasi yang diperlukan.
+# Local demo (CPU); create .env from .env.example if it does not exist,
+# then configure the initial account and other required settings.
 docker compose up --build
 ```
 
-Untuk produksi, isi `DOMAIN`, kredensial awal, dan secret di `.env`, lalu jalankan:
+For production, set `DOMAIN`, the initial credentials, and secrets in `.env`, then run:
 
 ```bash
 docker compose --env-file .env -f deploy/docker-compose.prod.yml up -d --build
 ```
 
-Demo tersedia di **http://localhost:8000**. Konfigurasi produksi menggunakan Caddy/HTTPS; sebelum membuka akses publik, atur domain, secret, backup, dan kebijakan retensi sesuai kebutuhan. Akun awal yang dibuat melalui `DASHBOARD_PASSWORD` tidak memerlukan password tersebut tetap berada di `.env` setelah bootstrap.
+The demo is available at **http://localhost:8000**. Production uses Caddy/HTTPS; before exposing it publicly, configure the domain, secrets, backups, and retention policy. The initial account does not require `DASHBOARD_PASSWORD` to remain in `.env` after bootstrap.
 
-## Pengujian
+## Testing
 
 ```bash
 cd backend && python -m pytest -q
 cd ../frontend && npm ci && npm run build
-npx playwright install chromium  # sekali saja pada mesin baru
+npx playwright install chromium  # once on a new machine
 npx playwright test --project=chromium
 ```
 
-Playwright menjalankan server pengujian dan database sementara; pengujian tidak memakai database operasional. Cakupannya meliputi login/peran, Live, Evidence/review, analitik, rekaman/upload/job, Agent, pengaturan, halaman admin, dan tampilan seluler.
+Playwright starts a test server and uses a temporary database; it does not access the operational database. Tests cover login and roles, Live, Evidence and reviews, analytics, recording uploads and jobs, the Agent, settings, admin pages, and mobile layouts.
 
-## Training dan evaluasi
+## Training and evaluation
 
-Notebook dan script tersedia di `training/`. Model hasil training adalah **candidate** sampai lulus evaluasi pada gold test set yang dipisahkan dari data latih. `training/evaluate_model.py` melaporkan mAP per kelas; `training/promote_model.py` memeriksa gate sebelum mengganti `backend/weights/best.pt`. Jangan melatih model menggunakan gold test set.
+Notebooks and scripts are available in `training/`. A trained model remains a **candidate** until it passes evaluation against a gold test set kept separate from the training data. `training/evaluate_model.py` reports per-class mAP; `training/promote_model.py` checks the promotion gate before replacing `backend/weights/best.pt`. Never train on the gold test set.
 
-- [SH17](https://github.com/ahmadmughees/SH17dataset) — CC BY-NC-SA (non-komersial).
+- [SH17](https://github.com/ahmadmughees/SH17dataset) — CC BY-NC-SA (non-commercial).
 - [PPE Dataset for Workplace](https://universe.roboflow.com/siabar/ppe-dataset-for-workplace) — CC BY 4.0.
-- Data lokal hasil anotasi sendiri.
+- Locally annotated data.
 
-**Keterbatasan evaluasi:** Pada gold set reviewed 340 frame, model aktif memperoleh mAP50-95 rata-rata **0,277** (helmet 0,604; vest 0,432; gloves 0,045; shoes 0,026). Gate promosi empat kelas belum tercapai. Angka ini tidak boleh dipakai sebagai klaim kesiapan deteksi empat APD penuh di lapangan; performa harus diuji ulang pada kamera dan kondisi lokasi target. Benchmark lokal MacBook M1 (`mps`, video 1080p) menghasilkan sekitar 11,9 pemeriksaan/dtk per kamera untuk 1 kamera dan 5,7 untuk 2 kamera; 3–4 kamera perlu perangkat lebih kuat atau penyesuaian konfigurasi.
+**Evaluation limitation:** On a reviewed 340-frame gold set, the active model achieves a mean mAP50-95 of **0.277** (helmet 0.604; vest 0.432; gloves 0.045; shoes 0.026). The four-class promotion gate has not been met. These figures must not be presented as evidence that all four PPE classes are ready for field deployment; performance must be reevaluated using the target site's cameras and conditions. A local MacBook M1 benchmark (`mps`, 1080p video) recorded approximately 11.9 checks per second per camera with one camera and 5.7 with two; three or four cameras require more capable hardware or configuration changes.
 
-## Lisensi dan penggunaan
+## License and use
 
-APD Vision adalah portofolio pribadi, bukan proyek open source. Kode, dokumentasi, dan materi asli proyek dilindungi; penyalinan, modifikasi, penggunaan ulang, atau distribusi memerlukan izin tertulis. Lihat [LICENSE](LICENSE). Lisensi dependency, model, dataset, font, dan aset pihak ketiga berlaku terpisah.
+APD Vision is a personal portfolio project, not an open-source project. Its original code, documentation, and materials are protected; copying, modifying, reusing, or distributing them requires written permission. See [LICENSE](LICENSE). Third-party dependencies, models, datasets, fonts, and assets remain subject to their respective licenses.

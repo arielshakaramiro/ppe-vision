@@ -1,369 +1,349 @@
-# APD Vision — Dokumentasi Teknis
+# APD Vision — Technical Overview
 
-Dokumen tunggal yang merangkum produk, arsitektur, pipeline computer vision, model data,
-keamanan, serta konvensi kode APD Vision.
+A single reference covering APD Vision's product, architecture, computer vision pipeline, data model, security, and coding conventions.
 
 ---
 
-## 1. Ringkasan produk
+## 1. Product overview
 
 | | |
 |---|---|
-| Nama | APD Vision |
-| Satu kalimat | Sistem CCTV yang mendeteksi kepatuhan APD (helm, rompi, sarung tangan, sepatu), mencatat pelanggaran beserta foto evidence dan waktunya, lalu bisa ditanya dalam bahasa Indonesia. |
-| Visi | Supervisor K3 tidak perlu menonton CCTV sepanjang hari. Sistem memberi tahu siapa yang melanggar, kapan, di mana, dan menunjukkan buktinya. |
+| Name | APD Vision |
+| In one sentence | A CCTV-based system that detects compliance with personal protective equipment (PPE)—helmets, vests, gloves, and shoes—records violations with photographic evidence and timestamps, and answers questions about the data in Indonesian. |
+| Vision | K3 (occupational safety and health) supervisors should not need to watch CCTV all day. The system identifies who violated a rule, when and where it happened, and provides supporting evidence. |
 
-### Masalah yang diselesaikan
+### Problems addressed
 
-- Pengawasan APD manual tidak mungkin berjalan 24 jam dan bergantung pada perhatian satu orang.
-- Rekaman CCTV menumpuk tanpa bisa ditanya; pertanyaan seperti "berapa orang tidak pakai sarung tangan kemarin siang?" butuh berjam-jam memutar ulang video.
-- Sistem deteksi APD umum hanya mengecek helm dan rompi, memakai satu aturan untuk semua area, dan sering salah karena satu frame yang meleset.
+- Manual PPE monitoring cannot run around the clock and depends on an individual's attention.
+- CCTV recordings accumulate without being searchable. Answering a question such as “How many people were not wearing gloves yesterday afternoon?” can take hours of video review.
+- Common PPE detection systems check only helmets and vests, apply the same rule to every area, and can be wrong because of a single missed frame.
 
-### Pengguna
+### Users
 
-| Pengguna | Kebutuhan utama |
+| User | Primary need |
 |---|---|
-| Supervisor / petugas K3 | Melihat pelanggaran yang sedang terjadi, menerima alert, me-review evidence. |
-| Manajer K3 | Melihat tren kepatuhan dan jam rawan, bertanya ke agent, membuat laporan. |
+| K3 supervisor / safety officer | See current violations, receive alerts, and review evidence. |
+| K3 manager | Track compliance trends and high-risk hours, ask the Agent questions, and produce reports. |
 
-### Prinsip desain
+### Design principles
 
-- **Jujur terhadap ketidakpastian.** Kalau bagian tubuh tidak terlihat, status menjadi *tidak pasti*, bukan pelanggaran.
-- **Angka selalu dari data.** Jawaban agent berasal dari query database, bukan dari karangan model bahasa.
-- **Aksesibilitas.** Status ditampilkan dengan warna **dan** teks/simbol, tidak hanya warna. Seluruh antarmuka berbahasa Indonesia, jam dalam WIB.
+- **Represent uncertainty honestly.** If a body part is not visible, its status is *uncertain*, not a violation.
+- **Ground figures in data.** Agent answers use database queries rather than numbers invented by a language model.
+- **Accessibility.** Status uses color **and** text or symbols, never color alone. The application interface is in Indonesian, and displayed times use WIB (Western Indonesian Time).
 
 ---
 
-## 2. Fitur
+## 2. Features
 
-### Input kamera
-- Video file (demo), bisa diulang (`loop`).
-- Proses video offline tanpa server (`scripts.process_video`, `--start` untuk waktu rekaman).
-- Stream RTSP / HP dengan sambung ulang otomatis; bisa diganti dari dashboard (validasi anti-SSRF).
-- Sumber video fleksibel: upload bertahap (potongan 10 MB, bisa dilanjutkan), file di folder server, mode **simulasi live** atau **analisis rekaman** dengan jam mulai.
-- Multi-kamera: satu model bersama untuk semua kamera, diproses serentak dalam batch; pelacak, zona, APD wajib, dan status terpisah per kamera.
+### Camera input
 
-### Deteksi dan analisis
-- Deteksi orang + 17 keypoint (YOLO11n-pose) dan 4 APD (model fine-tune).
-- Asosiasi APD ke orang per wilayah tubuh (kepala, torso, pergelangan tangan, pergelangan kaki; IoA ≥ 0,40).
-- Tracking ID pekerja (ByteTrack).
-- Tiga status dengan hysteresis: `compliant` / `violation` / `uncertain`.
-- Aturan APD per zona (poligon di database, seed dari konfigurasi).
-- Blur wajah di evidence dan live view, dari keypoint kepala.
+- Video files for demos, with optional looping (`loop`).
+- Offline video processing without a server (`scripts.process_video`; `--start` sets the recording's start time).
+- RTSP / phone streams with automatic reconnection; sources can be changed from the dashboard, subject to anti-SSRF validation.
+- Flexible video sources: resumable uploads in 10 MB chunks, server-side files, and **simulated live** or **recorded analysis** modes with a recording start time.
+- Multiple cameras share one model and are processed together in batches; each camera has separate tracking, zones, required PPE, and status.
 
-### Evidence dan data
-- Event pelanggaran & tidak pasti dengan waktu, durasi, kamera, zona, APD kurang.
-- Foto full frame beranotasi + crop orang, masing-masing dengan hash SHA-256.
-- Klip video 5 detik (2 detik sebelum + 3 detik sesudah event).
-- Versi model tercatat per event; precision lapangan per versi.
-- Review supervisor (benar / false positive) + audit log, ikut memengaruhi compliance rate.
-- Ekspor hasil review sebagai bahan retraining.
-- Retensi otomatis evidence dan backup otomatis database + evidence.
+### Detection and analysis
 
-### Alert
-- Telegram: foto, kamera, zona, jam, APD kurang (cooldown per pekerja).
-- Review langsung dari tombol di pesan Telegram (long polling, tanpa webhook).
-- Alert kualitas kamera menurun (drift).
+- Person detection with 17 keypoints (YOLO11n-pose) and detection of four PPE items (fine-tuned model).
+- PPE-to-person association by body region (head, torso, wrists, and ankles; IoA ≥ 0.40).
+- Worker tracking IDs through ByteTrack.
+- Three states with hysteresis: `compliant` / `violation` / `uncertain`.
+- Zone-specific PPE rules (polygons stored in the database and initially seeded from configuration).
+- Face blurring in evidence and the live view using head keypoints.
+
+### Evidence and data
+
+- Violation and uncertain events with time, duration, camera, zone, and missing PPE items.
+- Annotated full-frame photographs and worker crops, each with a SHA-256 hash.
+- Five-second video clips (two seconds before and three seconds after an event).
+- Model version recorded per event, enabling field precision comparisons by version.
+- Supervisor reviews (confirmed / false positive) with an audit log; reviews affect the compliance rate.
+- Review exports for retraining.
+- Automatic evidence retention and database/evidence backups.
+
+### Alerts
+
+- Telegram messages with a photograph, camera, zone, time, and missing PPE items, subject to a per-worker cooldown.
+- Review buttons in Telegram messages (long polling, no webhook).
+- Alerts when camera image quality deteriorates (drift).
 
 ### Dashboard (React)
 
-| Halaman | Isi |
+The page names below are the Indonesian labels used by the application.
+
+| Page | Contents |
 |---|---|
-| Live | Stream MJPEG, KPI, checklist per pekerja, pelanggaran hari ini, pemilih APD aktif per zona |
-| Analitik | Compliance rate, kepatuhan per APD, per jam (jam rawan), per hari, per kamera/zona |
-| Evidence | Galeri dengan filter periode/jenis/APD/review, modal detail + tombol review |
-| Agent | Chat bahasa Indonesia dengan strip foto evidence |
-| Intervensi | Catat intervensi, bandingkan sebelum/sesudah + uji statistik |
-| Sistem | Kesehatan kamera (drift) dan precision model per versi |
-| Bisnis | Kalkulator biaya/ROI dengan asumsi yang bisa diganti |
-| Login | Satu form; pesan gagal tidak membocorkan username |
-| Pengguna (admin) | Buat akun, ubah peran, nonaktifkan, reset password, hubungkan ID Telegram |
-| Pengaturan (admin) | Editor poligon zona, APD wajib per zona, sensitivitas, shift, Telegram, retensi, kelola kamera + upload |
-| Audit log | Tabel aksi per aktor dengan filter periode/aktor/aksi |
+| Live | MJPEG stream, KPIs, per-worker checklists, today's violations, and active PPE selection by zone |
+| Analitik (Analytics) | Compliance rate and PPE compliance by hour (including high-risk hours), day, camera, and zone |
+| Evidence | Gallery with period/type/PPE/review filters, a detail modal, and review actions |
+| Agent | Indonesian-language chat with a strip of evidence photographs |
+| Intervensi (Interventions) | Record interventions and compare before-and-after outcomes with a statistical test |
+| Sistem (System) | Camera health (drift) and model precision by version |
+| Bisnis (Business) | Cost/ROI calculator with adjustable assumptions |
+| Login | Single form; failed-login messages do not reveal usernames |
+| Pengguna (Users, admin) | Create accounts, change roles, deactivate users, reset passwords, and link Telegram IDs |
+| Pengaturan (Settings, admin) | Zone polygon editor, required PPE by zone, sensitivity, shifts, Telegram, retention, camera management, and uploads |
+| Audit log | Actions by actor, filterable by period, actor, and action |
 
-### Agent K3
-- Tanya jawab bahasa Indonesia via tool calling: empat tool **baca-saja** (`count_violations`, `get_evidence`, `compliance_summary`, `intervention_effect`).
-- Periode relatif (hari ini, kemarin, minggu ini, 7/30 hari).
-- Jawaban berisi angka + foto evidence + jam.
-- Full lokal: Ollama (bawaan) dengan cadangan router offline; API cloud opsional.
-- RAG regulasi K3 (Permenaker No. 8/2010, UU No. 1/1970, PP No. 50/2012) via cosine similarity dan tool `search_regulation`.
-- Laporan K3 siap cetak (HTML → PDF dari browser).
-- Pembatas cakupan: tolak coding, topik lain, prompt injection, upaya membobol; penolakan dicatat.
+### K3 Agent
 
-### Akun dan peran
-- Login per orang, sesi dengan logout, peran viewer / supervisor / admin (dicek di server).
-- Pembatas login gagal berlapis (IP+username / IP / username), tersimpan di database.
-- Tolak password umum, password memuat username, deret berurutan.
-- Audit log mencatat siapa melakukan apa.
+- Indonesian-language questions and answers through tool calling: four **read-only** tools (`count_violations`, `get_evidence`, `compliance_summary`, `intervention_effect`).
+- Relative periods (today, yesterday, this week, and the last 7 or 30 days).
+- Answers containing figures, evidence photographs, and timestamps.
+- Fully local operation: Ollama by default, with an offline router fallback; a cloud API is optional.
+- Retrieval of K3 regulations (Permenaker No. 8/2010, UU No. 1/1970, PP No. 50/2012) using cosine similarity and the `search_regulation` tool.
+- Printable K3 reports (HTML, printable to PDF from the browser).
+- Scope restrictions: reject coding requests, unrelated topics, prompt injection, and attempts to bypass safeguards; record rejections.
 
-### Di luar scope (disengaja)
-Face recognition / identitas pekerja, re-identification lintas kamera, deteksi jatuh / intrusi zona bahaya / alat berat, multi-tenant & SSO, aplikasi mobile, membedakan sepatu safety dari sepatu biasa.
+### Accounts and roles
+
+- Individual logins, sessions with logout, and server-enforced `viewer` / `supervisor` / `admin` roles.
+- Layered failed-login throttling (IP+username / IP / username) stored in the database.
+- Rejection of common passwords, passwords containing the username, and sequential strings.
+- An audit log that records who performed each action.
+
+### Intentionally out of scope
+
+Face recognition or worker identity, cross-camera re-identification, fall detection, hazardous-zone intrusion, heavy-equipment detection, multi-tenancy and SSO, a mobile app, and distinguishing certified safety footwear from ordinary shoes.
 
 ---
 
-## 3. Arsitektur sistem
+## 3. System architecture
 
 ```text
 Video / RTSP ─▶ worker: InferenceScheduler ─▶ CameraSession ─▶ DbSink ─▶ SQLite + evidence/
                        │                                           └─▶ Telegram
-                       └─▶ JPEG + status JSON ─▶ volume /tmp/ppe_live ─┐
-                                                                      ▼
+                       └─▶ JPEG + status JSON ─▶ shared /tmp/ppe_live volume ─┐
+                                                                              ▼
 Browser ─▶ Caddy HTTPS ─▶ app: FastAPI ─▶ RemoteLiveState + queries ─▶ API, MJPEG, SPA
-                                      └─▶ agent ─▶ Ollama/offline ─▶ tool baca-saja
+                                      └─▶ agent ─▶ Ollama/offline ─▶ read-only tools
 ```
 
-Pada **Compose produksi**, API dan tugas latar belakang berjalan di dua proses/container berbeda.
-Service `worker` menjalankan pipeline kamera, job analisis rekaman, polling Telegram, backup, dan
-retensi. Service `app` dipaksa `RUN_PIPELINE=0` dan `ANALYSIS_JOB_RUNNER=0`; frame live serta status
-dibaca dari volume bersama `/tmp/ppe_live`, event dibaca dari database bersama. Halaman Analitik,
-Evidence, dan Agent tetap berfungsi walaupun pipeline mati.
+With **production Compose**, the API and background work run in separate processes/containers. The `worker` service handles the camera pipeline, recorded-analysis jobs, Telegram polling, backups, and retention. The `app` service is configured with `RUN_PIPELINE=0` and `ANALYSIS_JOB_RUNNER=0`; it reads live frames and status from the shared `/tmp/ppe_live` volume and events from the shared database. Analytics, Evidence, and Agent pages remain functional if the pipeline stops.
 
-Pada **development native**, `RUN_PIPELINE=1` dan/atau `ANALYSIS_JOB_RUNNER=1` boleh menjalankan
-pipeline/job di proses API agar developer tidak perlu menyalakan worker produksi.
+In **native development**, `RUN_PIPELINE=1` and/or `ANALYSIS_JOB_RUNNER=1` can run the pipeline and jobs within the API process, without starting a production worker.
 
-### Stack teknologi
+### Technology stack
 
-| Lapisan | Teknologi |
+| Layer | Technology |
 |---|---|
-| Deteksi orang + keypoint + tracking | Ultralytics YOLO11n-pose, ByteTrack |
-| Deteksi APD | YOLO hasil fine-tune (`weights/best.pt` via `models.ppe`) |
-| Pemrosesan gambar | OpenCV (headless), NumPy |
+| Person detection, keypoints, and tracking | Ultralytics YOLO11n-pose, ByteTrack |
+| PPE detection | Fine-tuned YOLO (`weights/best.pt`, selected through `models.ppe`) |
+| Image processing | OpenCV (headless), NumPy |
 | Backend | FastAPI, Uvicorn |
-| ORM / DB | SQLModel di atas SQLite |
-| Agent | Anthropic SDK / HTTP Ollama / router kata kunci (tool calling, tanpa SQL bebas) |
-| Alert | Telegram Bot API via httpx (thread daemon) |
-| Frontend | React 18, Vite 5, TypeScript (strict), Recharts; SPA navigasi hash |
-| Training | Ultralytics di Google Colab |
-| Kemasan | Docker multi-stage, Docker Compose (CPU saja) |
+| ORM / database | SQLModel over SQLite |
+| Agent | Anthropic SDK / HTTP Ollama / keyword router (tool calling, no unrestricted SQL) |
+| Alerts | Telegram Bot API via httpx (daemon thread) |
+| Frontend | React 18, Vite 5, strict TypeScript, Recharts; hash-routed SPA |
+| Training | Ultralytics on Google Colab |
+| Packaging | Multi-stage Docker build, Docker Compose (CPU) |
 
-### Struktur folder
+### Repository layout
 
-```
-docs/                     dokumentasi produk, arsitektur, desain, API, database, keamanan
+```text
+docs/                     local product, architecture, design, API, database, and security notes
 backend/
-  config.yaml             kamera, model, class_map, asosiasi, hysteresis, zona awal, evidence
-  pipeline/               logika computer vision (tanpa database)
-  app/                    FastAPI, query, auth, security, agent, guard, sink, dll.
+  config.yaml             cameras, models, class_map, association, hysteresis, initial zones, evidence
+  pipeline/               computer vision logic (independent of the database)
+  app/                    FastAPI, queries, auth, security, agent, guard, sink, etc.
   scripts/                seed_demo, process_video, export_reviews, users, retention, backup, worker
   tests/                  pytest
-  weights/                best.pt + yolo11n-pose.pt (tidak di-commit)
-  data/                   ppe.db + evidence/ + videos/ (tidak di-commit, dibuat otomatis)
+  weights/                best.pt + yolo11n-pose.pt (not committed)
+  data/                   ppe.db + evidence/ + videos/ (not committed; created as needed)
 deploy/                   Caddyfile + docker-compose.prod.yml (app + worker + Caddy)
 frontend/
-  src/api.ts              semua fetch + tipe response
-  src/features/           halaman per fitur (live, evidence, analytics, agent, admin, dll.)
-  src/ui/ + src/components/  komponen tampilan bersama
-training/                 notebook Colab + script dataset/evaluasi
+  src/api.ts              fetch functions and response types
+  src/features/           feature-based pages (live, evidence, analytics, agent, admin, etc.)
+  src/ui/ + src/components/  shared presentational components
+training/                 Colab notebooks + dataset/evaluation scripts
 ```
 
 ---
 
-## 4. Pipeline computer vision
+## 4. Computer vision pipeline
 
-Pipeline **tidak tahu** soal database. Ia hanya memanggil method `EventSink` (`on_open`, `on_close`,
-`on_track_lost`, opsional `on_clip` / `on_quality`); implementasi ada di `app/sink.py`. Aturan zona
-dinamis diberikan lewat callable `zone_provider` dari `app/main.py`, sehingga `pipeline/` tidak pernah
-meng-import `app/` dan bisa diuji dengan detektor palsu.
+The pipeline **does not know about the database**. It only calls `EventSink` methods (`on_open`, `on_close`, `on_track_lost`, and optionally `on_clip` / `on_quality`); the implementation is in `app/sink.py`. Dynamic zone rules are supplied by a `zone_provider` callable from `app/main.py`, so `pipeline/` never imports `app/` and can be tested with a fake detector.
 
-| Modul | Tanggung jawab |
+| Module | Responsibility |
 |---|---|
-| `types.py` | Tipe data (`Person`, `PPEDet`, `Evidence`), geometri, indeks keypoint COCO |
-| `detector.py` | Membungkus dua model YOLO; satu-satunya tempat `ultralytics` di-import |
-| `association.py` | Menghitung wilayah tubuh dari keypoint, mencocokkan APD ke wilayah |
-| `state.py` | Hysteresis per item, status stabil per orang, buka/tutup event |
-| `zones.py` | Point-in-polygon pada titik kaki ternormalisasi |
-| `evidence.py` | Blur kepala, crop, anotasi, simpan JPG, hitung SHA-256 |
-| `draw.py` | Warna status, kotak + checklist, garis zona, blur |
-| `clips.py` | Buffer JPEG + penulis klip WebM (VP8) di thread terpisah |
-| `quality.py` | Kecerahan, ketajaman, confidence → ringkasan per menit |
-| `runner.py` | Loop video, menyatukan semua modul, memanggil `EventSink`, mengisi `LiveState` |
+| `types.py` | Data types (`Person`, `PPEDet`, `Evidence`), geometry, COCO keypoint indices |
+| `detector.py` | Wraps both YOLO models; the only place that imports `ultralytics` |
+| `association.py` | Derives body regions from keypoints and associates PPE with each region |
+| `state.py` | Per-item hysteresis, stable per-person state, event opening/closing |
+| `zones.py` | Point-in-polygon checks using normalized foot positions |
+| `evidence.py` | Head blurring, cropping, annotation, JPG storage, SHA-256 hashing |
+| `draw.py` | State colors, boxes and checklists, zone lines, blurring |
+| `clips.py` | JPEG buffer and WebM (VP8) clip writer on a separate thread |
+| `quality.py` | Brightness, sharpness, confidence → per-minute summary |
+| `runner.py` | Video loop integrating the modules, calling `EventSink`, updating `LiveState` |
 
-### Siklus status dan event
+### State and event lifecycle
 
+```text
+Item score: decay of 0.90 per frame, +confidence when worn, -1.0 when visibly missing, capped at [-3, 3]
+  score ≥ +1.0                         → present
+  score ≤ -1.5 and evaluations ≥ 5    → missing
+  no evidence for ≥ 45 frames          → unknown
+  between thresholds                  → retain previous state
+
+Person state (considering only PPE required in that zone):
+  any missing  → violation
+  any unknown  → uncertain
+  otherwise    → compliant
+
+Stable state: violation/compliant require 8 consecutive frames; uncertain requires 30
+Event: opens when the stable state becomes violation/uncertain; closes when it changes
+       or when the track has been missing for > 30 frames
 ```
-skor item: decay 0,90 per frame, +conf jika dipakai, -1,0 jika terlihat tanpa APD, dibatasi [-3, 3]
-  skor ≥ +1,0                         → present
-  skor ≤ -1,5 dan evaluasi ≥ 5        → missing
-  tanpa bukti ≥ 45 frame              → unknown
-  di antaranya                        → status lama dipertahankan
 
-status orang (hanya APD wajib di zonanya):
-  ada missing  → violation
-  ada unknown  → uncertain
-  selain itu   → compliant
+These values come from `config.yaml` and can be adjusted by location. Default demo/top-down zones require only `helmet` and `vest`; `gloves` and `shoes` are still detected but remain `not_required` until an operator enables them for a zone.
 
-status stabil: violation/compliant butuh 8 frame berturut-turut; uncertain butuh 30
-event: dibuka saat status stabil menjadi violation/uncertain, ditutup saat berubah
-       atau saat track hilang > 30 frame
-```
+### Multiple cameras
 
-Semua angka berasal dari `config.yaml` dan bisa disetel per lokasi. Default zona demo/top-down hanya
-mewajibkan `helmet` dan `vest`; `gloves`/`shoes` tetap terdeteksi tetapi `not_required` sampai operator
-mengaktifkannya per zona.
+One model serves all cameras in a shared batch. Frame capture continues independently; only model inference time is shared.
 
-### Multi-kamera
-
-Satu model untuk semua kamera, diproses serentak (batch). Pengambilan gambar tidak pernah berhenti;
-yang dibagi hanya waktu model.
-
-```
-CAM-01 ─ CameraReader (thread) ─┐  frame terbaru saja
+```text
+CAM-01 ─ CameraReader (thread) ─┐  latest frame only
 CAM-02 ─ CameraReader (thread) ─┼─> InferenceScheduler (1 thread)
-CAM-03 ─ CameraReader (thread) ─┘     pose.predict([f1,f2,f3])  ← satu panggilan untuk semua
+CAM-03 ─ CameraReader (thread) ─┘     pose.predict([f1,f2,f3])  ← one call for all
                                       ppe.predict([f1,f2,f3])
                      ┌──────────────────────┼──────────────────────┐
               CameraSession CAM-01   CameraSession CAM-02   CameraSession CAM-03
-              (tracker, zona, hysteresis, evidence, klip, statistik — terpisah)
+              (separate tracker, zones, hysteresis, evidence, clips, statistics)
                                             │
-                                        EventSink → database, alert
+                                        EventSink → database, alerts
 ```
 
-Tracker wajib satu per kamera (batch campuran bisa menukar ID antarkamera). Kamera yang putus hanya
-keluar dari batch sampai tersambung lagi; kamera lain tetap jalan. Kapasitas diukur dengan
-`scripts/benchmark_cameras.py` di perangkat target.
+Each camera must have its own tracker; tracking across a mixed batch can swap worker IDs between cameras. A disconnected camera leaves the batch until it reconnects, while other cameras continue. Measure actual capacity with `scripts/benchmark_cameras.py` on the target hardware.
 
-### Sumber video: simulasi vs analisis
+### Video sources: simulation versus analysis
 
-```
-Simulasi live   : video ─(putar ulang, kecepatan asli)─> batch bersama kamera lain ─> event "simulasi"
-Analisis rekaman: video ─> AnalysisJob (latar belakang, 5–10 pemeriksaan/dtk video,
-                  bisa dijeda & dilanjutkan setelah restart) ─> event "rekaman"
-                  waktu event = jam mulai rekaman + posisi frame
+```text
+Simulated live  : video ─(looped at original speed)─> shared camera batch ─> "simulasi" events
+Recorded analysis: video ─> background AnalysisJob (5–10 checks/sec of video time,
+                   pausable and resumable after restart) ─> "rekaman" events
+                   event time = recording start time + position within the video
 ```
 
-`source_kind` (`live` | `rekaman` | `simulasi`) disimpan di setiap event. Analitik, agent, dan laporan
-K3 secara bawaan menghitung `live` + `rekaman`; simulasi hanya jika dipilih dan tidak pernah masuk
-laporan K3.
+`source_kind` (`live` | `rekaman` | `simulasi`) is stored on each event. Analytics, the Agent, and K3 reports include `live` + `rekaman` by default; simulated data is included only if explicitly selected and is never included in K3 reports.
 
-### Agent K3 (alur)
+### K3 Agent request flow
 
-1. `POST /api/agent/chat` menerima pesan + riwayat; rate limit per username + IP; `clean_history`
-   menyisakan maks. 8 pesan yang lolos filter.
-2. `guard.check_input` memeriksa pertanyaan. Jika ditolak, jawaban baku dikembalikan tanpa memanggil
-   model, dan penolakan dicatat di `AuditLog`.
-3. Model memanggil tool baca-saja (maks. 6 putaran); argumen divalidasi ulang (`_clean_args`) lalu
-   memanggil `queries.py`.
-4. `guard.check_output` memeriksa jawaban; jawaban berisi kode atau bocoran instruksi diganti penolakan.
-5. Evidence dikembalikan terpisah dari teks, sehingga frontend menampilkan foto asli, bukan URL
-   karangan model.
+1. `POST /api/agent/chat` receives a message and history; applies a per-username and per-IP rate limit; `clean_history` retains at most eight messages that pass filtering.
+2. `guard.check_input` checks the question. If rejected, it returns a fixed response without calling the model and records the rejection in `AuditLog`.
+3. The model calls read-only tools (at most six rounds); `_clean_args` revalidates arguments before calling `queries.py`.
+4. `guard.check_output` checks the answer; responses containing code or leaked instructions are replaced with a refusal.
+5. Evidence is returned separately from the answer text so the frontend shows real photographs rather than model-invented URLs.
 
 ---
 
-## 5. Model data
+## 5. Data model
 
-- **Database:** SQLite (`backend/data/ppe.db`), ORM SQLModel. Tabel dibuat saat start (`init_db`).
-- **Migrasi ringan:** kolom baru ditambahkan otomatis ke tabel lama saat start. Ganti nama / ubah tipe
-  / hapus kolom tidak ditangani otomatis.
-- **Waktu:** semua kolom waktu `NaiveDatetime` berisi WIB tanpa zona, dibuat lewat `queries.now_local()`
-  atau `Runner._now()`.
+- **Database:** SQLite (`backend/data/ppe.db`) with SQLModel. `init_db` creates tables at startup.
+- **Lightweight migration:** new columns are added to existing tables automatically at startup. Renaming or dropping columns and changing their types are not handled automatically.
+- **Time:** all `NaiveDatetime` columns store WIB local time without a time-zone offset, produced by `queries.now_local()` or `Runner._now()`.
 
-| Tabel | Isi |
+| Table | Contents |
 |---|---|
-| `Violation` | Satu event pelanggaran/tidak pasti: kamera, zona, track/worker id, waktu mulai/selesai, durasi, APD kurang & tidak pasti, confidence, path + hash evidence (foto & klip), review, versi model, `source_kind` |
-| `TrackRecord` | Ringkasan satu pekerja per sesi: status terburuk, APD yang pernah kurang. Dasar compliance rate |
-| `AuditLog` | Jejak aksi manusia (hanya ditambah): review, akun, zona, kamera/video/job, intervensi, pengaturan, penolakan agent, retensi |
-| `User` | Akun dashboard: username, hash password scrypt, peran, status aktif, telegram_id |
-| `SessionToken` | Sesi login: hash token, kedaluwarsa |
-| `LoginFailure` | Percobaan login gagal berlapis untuk throttle |
-| `Intervention` | Tindakan K3 untuk dibandingkan sebelum vs sesudah |
-| `ZoneRule` | Aturan zona dari dashboard: poligon ternormalisasi + APD wajib per `(name, camera_id)` |
-| `Setting` | Pengaturan deteksi dashboard (sensitivitas, shift, alert, retensi) |
-| `QualityStat` | Kualitas input per kamera per menit (kecerahan, ketajaman, confidence) |
-| `Camera` | Kamera multi-sumber: `source_kind`, URL terenkripsi (Fernet), video_id, mode, sample_rate |
-| `VideoFile` / `UploadSession` / `AnalysisJob` | Registri video, upload bertahap, dan job analisis rekaman |
+| `Violation` | One violation or uncertain event: camera, zone, track/worker IDs, start/end times, duration, missing/uncertain PPE, confidence, evidence paths and hashes (photos and clips), review, model version, `source_kind` |
+| `TrackRecord` | Summary of one worker per session: worst state and PPE items ever missing; basis of the compliance rate |
+| `AuditLog` | Append-only record of human actions: reviews, accounts, zones, cameras/videos/jobs, interventions, settings, Agent rejections, retention |
+| `User` | Dashboard account: username, scrypt password hash, role, active status, `telegram_id` |
+| `SessionToken` | Login session: token hash and expiration |
+| `LoginFailure` | Failed-login attempts for layered throttling |
+| `Intervention` | K3 action for before-and-after comparison |
+| `ZoneRule` | Dashboard zone rules: normalized polygon and required PPE for each `(name, camera_id)` |
+| `Setting` | Dashboard detection settings (sensitivity, shifts, alerts, retention) |
+| `QualityStat` | Per-camera, per-minute input quality (brightness, sharpness, confidence) |
+| `Camera` | Multi-source camera: `source_kind`, encrypted URL (Fernet), `video_id`, mode, `sample_rate` |
+| `VideoFile` / `UploadSession` / `AnalysisJob` | Video registry, resumable upload, and recorded-analysis jobs |
 
-**Relasi** bersifat logis (tanpa foreign key): `Violation` ↔ `TrackRecord` lewat
-`(session, camera_id, track_id)`; `AuditLog.violation_id` → `Violation.id`. "Orang unik" = kombinasi
-`(session, camera_id, track_id)` berbeda.
+**Relationships** are logical (no declared foreign keys): `Violation` ↔ `TrackRecord` through `(session, camera_id, track_id)`; `AuditLog.violation_id` → `Violation.id`. A “unique person” is a distinct `(session, camera_id, track_id)` combination.
 
-**File evidence** di `backend/data/evidence/YYYY-MM-DD/`; database hanya menyimpan path relatif. File
-tidak boleh diubah setelah ditulis (hash akan tidak cocok). Retensi menghapus file lama dan mengosongkan
-path, tetapi baris tetap ada; event `pending` tidak disentuh.
+**Evidence files** are stored under `backend/data/evidence/YYYY-MM-DD/`; the database stores only relative paths. Files must not be changed after writing, or their hashes will no longer match. Retention deletes older files and clears their paths while keeping the database rows; `pending` events are not touched.
 
 ---
 
-## 6. Keamanan
+## 6. Security
 
-Pertahanan berlapis untuk agent:
+The Agent uses layered defenses:
 
-| Lapisan | Mekanisme |
+| Layer | Mechanism |
 |---|---|
-| Filter input | `guard.check_input` sebelum model dipanggil: tolak prompt injection, permintaan secret/ubah data, permintaan coding, dan topik di luar K3/APD. Teks dinormalisasi dulu (aksen, karakter tak terlihat, `h4ck`). Pertanyaan yang ditolak **tidak pernah sampai ke model**. |
-| Tool baca-saja | Model hanya bisa memanggil empat tool baca-saja; tidak ada akses SQL, file, shell, atau operasi tulis. |
-| Validasi argumen | `_clean_args`: `item` harus salah satu dari 4 APD, `limit` dipaksa 1–12, `camera_id`/`zone` dipotong 64 karakter. |
-| Riwayat | `clean_history`: pesan assistant hanya dipakai bila membawa tanda HMAC sah dari server (`sign_answer`), sehingga jawaban karangan berisi instruksi baru tidak sampai ke model. |
-| Filter output | `guard.check_output`: jawaban berisi kode atau bocoran instruksi diganti penolakan. Foto diambil dari hasil tool, bukan URL yang ditulis model. |
+| Input filter | `guard.check_input` runs before the model: rejects prompt injection, requests for secrets or data changes, coding requests, and topics outside K3/PPE. Text is normalized first (accented characters, invisible characters, substitutions such as `h4ck`). Rejected questions **never reach the model**. |
+| Read-only tools | The model has access only to four read-only tools; it cannot run SQL, access files or a shell, or perform writes. |
+| Argument validation | `_clean_args`: `item` must be one of the four PPE codes; `limit` is restricted to 1–12; `camera_id` and `zone` are truncated to 64 characters. |
+| History | `clean_history` accepts assistant messages only with a valid server-issued HMAC signature (`sign_answer`), preventing fabricated replies carrying new instructions from reaching the model. |
+| Output filter | `guard.check_output` replaces answers containing code or leaked instructions with a refusal. Chat photographs come from tool results, not model-provided URLs. |
 
-Keamanan lain: akun + cookie sesi + peran (dicek di server), hash password scrypt (stdlib), pembatas
-login gagal berlapis, redaksi error (pesan 502 umum; detail hanya di log server), validasi URL kamera
-anti-SSRF, pemeriksaan Origin untuk request pengubah data, enkripsi URL kamera (Fernet). Variabel
-sensitif (`DASHBOARD_PASSWORD`, API key, token Telegram, URL RTSP, `DATABASE_URL`) hanya lewat `.env`
-yang tidak di-commit.
+Additional protections include accounts with session cookies and server-enforced roles, scrypt password hashes from the standard library, layered login throttling, error redaction (generic 502 responses with details retained only in server logs), anti-SSRF camera URL validation, Origin checks on write requests, and encrypted camera URLs (Fernet). Sensitive variables (`DASHBOARD_PASSWORD`, API keys, Telegram tokens, RTSP URLs, `DATABASE_URL`) are stored in `.env`, which is not committed.
 
-Database dan evidence berisi data pribadi (relevan UU PDP); wajah di-blur pada evidence dan live view.
+The database and evidence contain personal data (relevant to Indonesia's Personal Data Protection Law, UU PDP); faces are blurred in evidence and the live view.
 
 ---
 
-## 7. Konvensi kode
+## 7. Coding conventions
 
-### Stack & prinsip
-- Backend/pipeline: Python 3.11, FastAPI, SQLModel, OpenCV, NumPy, Ultralytics.
-- Frontend: TypeScript (strict), React 18 function component, Vite, CSS biasa, Recharts.
-- Test: pytest (backend); type check frontend lewat `npm run build`.
-- Kode yang mudah dibaca lebih baik daripada kode yang pintar. Satu fungsi, satu tugas. Nilai yang perlu
-  disetel masuk `config.yaml`, bukan konstanta tersebar.
+### Stack and principles
 
-### Bahasa
-| Hal | Bahasa |
+- Backend and pipeline: Python 3.11, FastAPI, SQLModel, OpenCV, NumPy, Ultralytics.
+- Frontend: strict TypeScript, React 18 function components, Vite, plain CSS, Recharts.
+- Tests: pytest for the backend; frontend type checking runs through `npm run build`.
+- Readable code is preferable to clever code. Each function should have one responsibility. Tunable values belong in `config.yaml`, not scattered constants.
+
+### Language
+
+| Element | Language |
 |---|---|
-| Nama variabel, fungsi, kelas, file | Inggris (`track_id`, `associate`, `StateManager`) |
-| Docstring, komentar | Indonesia |
-| Teks UI, pesan error, jawaban agent | Indonesia |
-| Kunci JSON response API | Indonesia (`waktu`, `apd_kurang`) |
-| Kode APD internal | Inggris: `helmet`, `vest`, `gloves`, `shoes` |
+| Variable, function, class, and file names | English (`track_id`, `associate`, `StateManager`) |
+| Docstrings and comments | Indonesian |
+| UI text, user-facing errors, Agent answers | Indonesian |
+| API JSON response keys | Indonesian (`waktu`, `apd_kurang`) |
+| Internal PPE codes | English: `helmet`, `vest`, `gloves`, `shoes` |
 
-### Aturan lapisan
-- `pipeline/` tidak boleh meng-import `app/`.
-- `app/main.py` berisi route tipis: validasi → panggil `queries`/`agent` → kembalikan hasil.
-- Setiap endpoint pengubah data memakai `Depends(supervisor)` / `Depends(admin)` dan mencatat
-  `auth.audit(...)`.
-- Akses database hanya lewat `Session(engine)` dan `select(...)`. Tidak ada SQL mentah.
-- Frontend menyembunyikan aksi dengan `can(useMe(), "supervisor")`; server tetap sumber kebenaran.
+### Layering rules
 
-### Komentar
-Tulis **kenapa**, bukan **apa**. Angka ambang yang tidak jelas asalnya diberi komentar atau dipindah ke
-`config.yaml`.
+- `pipeline/` must not import `app/`.
+- `app/main.py` contains thin routes: validate → call `queries` / `agent` → return the result.
+- Every data-changing endpoint uses `Depends(supervisor)` / `Depends(admin)` and records `auth.audit(...)`.
+- Database access uses `Session(engine)` and `select(...)`; no raw SQL.
+- The frontend hides unauthorized actions using `can(useMe(), "supervisor")`; the server remains the authority.
 
-### Checklist sebelum menyelesaikan tugas
-- `cd backend && python -m pytest -q` lolos.
-- `cd frontend && npm run build` lolos (jika frontend diubah).
-- Halaman yang diubah dibuka di lebar desktop dan ≤ 900px.
-- Tidak ada `print`/`console.log` debug, kode mati, atau import tak terpakai.
-- Dokumen di `docs/` yang terdampak sudah diperbarui.
+### Comments
+
+Explain **why**, not **what**. Document thresholds whose origin is unclear or move them to `config.yaml`.
+
+### Checklist before finishing a change
+
+- `cd backend && python -m pytest -q` passes.
+- `cd frontend && npm run build` passes when the frontend changes.
+- Open modified pages at desktop width and at ≤ 900px.
+- No new debug `print`/`console.log`, dead code, or unused imports.
+- Update any affected documentation under `docs/`.
 
 ---
 
 ## 8. Deployment
 
-| Lingkungan | Cara | Catatan |
+| Environment | Command | Notes |
 |---|---|---|
-| Development Mac M1 | `uvicorn` + `npm run dev` | `device: mps` di config |
-| Demo Docker | `docker compose up --build` | CPU, user non-root, satu worker, volume untuk data/weights/config |
-| Produksi | `docker compose --env-file .env -f deploy/docker-compose.prod.yml up -d --build` | Caddy HTTPS di depan, port 8000 tertutup, `COOKIE_SECURE=1`, healthcheck `/api/healthz` |
+| Development on Mac M1 | `uvicorn` + `npm run dev` | `device: mps` in configuration |
+| Docker demo | `docker compose up --build` | CPU, non-root user, one worker, volumes for data/weights/config |
+| Production | `docker compose --env-file .env -f deploy/docker-compose.prod.yml up -d --build` | Caddy HTTPS in front, port 8000 closed externally, `COOKIE_SECURE=1`, `/api/healthz` health check |
 
-### Layanan eksternal
+### External services
 
-| Layanan | Untuk | Wajib? | Saat gagal |
+| Service | Purpose | Required? | On failure |
 |---|---|---|---|
-| Anthropic API / Ollama | Model agent | Tidak | Endpoint agent 502; router offline tetap menjawab hitungan deterministik |
-| Telegram Bot API | Alert & tombol review | Tidak | Dicatat ke log; pipeline tetap jalan, polling retry hingga 60 dtk |
-| Unduh bobot pose | Saat pertama pipeline jalan | Ya, sekali | Pipeline gagal start, error di `/api/health` |
+| Anthropic API / Ollama | Agent model | No | Agent endpoint returns 502; the offline router can still answer deterministic count questions |
+| Telegram Bot API | Alerts and review buttons | No | Error logged; pipeline continues, polling retries with a delay of up to 60 seconds |
+| Pose-weight download | First pipeline run | Yes, once | Pipeline startup fails; error appears in `/api/health` |
 
-### Catatan skalabilitas
-- Jalankan **satu** instance service `worker` (satu model + satu scheduler untuk semua kamera).
-- SQLite cukup untuk satu penulis; multi-worker → PostgreSQL via `DATABASE_URL` (perlu migrasi).
-- Evidence di disk lokal; deploy jangka panjang → object storage + retensi.
-- Inference bisa diekspor ke CoreML/ONNX untuk FPS lebih tinggi; deteksi APD bisa tiap N frame karena
-  hysteresis sudah meredam.
-- Monitoring: `/api/healthz` (publik), `/api/health` + halaman Sistem (butuh login), healthcheck
-  Compose, heartbeat worker, kesehatan kamera per menit.
+### Scaling considerations
+
+- Run **one** `worker` service instance (one model and one scheduler for all cameras).
+- SQLite is sufficient for one writer; multiple writers would require PostgreSQL via `DATABASE_URL` and a migration.
+- Evidence is stored on local disk; long-term deployments would need object storage and a retention policy.
+- Inference can be exported to CoreML/ONNX for higher throughput; PPE detection can run every N frames because hysteresis smooths the results.
+- Monitoring: `/api/healthz` (public), `/api/health` and the Sistem (System) page (login required), Compose health checks, worker heartbeat, and per-minute camera health.
