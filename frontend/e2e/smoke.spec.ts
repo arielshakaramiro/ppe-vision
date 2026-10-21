@@ -58,6 +58,7 @@ async function openDestination(page: Page, name: string) {
 }
 
 test("semua halaman terbuka tanpa error", async ({ page }) => {
+  test.setTimeout(60_000);
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
   page.on("console", (m) => { if (m.type() === "error" && !IGNORE.test(m.text())) errors.push(`console: ${m.text()}`); });
@@ -77,9 +78,13 @@ test("semua halaman terbuka tanpa error", async ({ page }) => {
     const size = page.viewportSize();
     for (const w of WIDTHS) {
       await page.setViewportSize({ width: w, height: size?.height ?? 900 });
+      // Screenshot fullPage dapat mengubah viewport sementara; tunggu header selesai mengikuti lebar uji.
+      await expect.poll(() => page.evaluate(() => ({
+        viewport: window.innerWidth,
+        header: Math.round(document.querySelector("header.av-header")?.getBoundingClientRect().width ?? 0),
+      }))).toEqual({ viewport: w, header: w });
       // ukur dalam posisi gulir paling atas (beberapa halaman, misalnya chat, otomatis menggulir ke bawah)
       await page.evaluate(() => window.scrollTo(0, 0));
-      await page.waitForTimeout(150);
       const r = await page.locator("header nav").first().boundingBox().catch(() => null);
       const key = `${w}px → ${r ? `x=${Math.round(r.x)} y=${Math.round(r.y)} lebar≈${Math.round(r.width / 4) * 4}` : "nav tidak ada"}`;
       navPos.set(key, [...(navPos.get(key) ?? []), name]);
