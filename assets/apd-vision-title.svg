@@ -1,28 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 220" role="img" aria-labelledby="title description">
   <title id="title">APD Vision</title>
-  <desc id="description">APD Vision workplace safety monitoring. The title and underline appear gently, then remain still.</desc>
+  <desc id="description">APD Vision workplace safety monitoring, with a gently floating title and a moving line beneath it.</desc>
   <style>
-    .title { fill: #f3f5f3; font: 700 82px Arial, Helvetica, sans-serif; letter-spacing: -3px; }
+    .title { fill: #f3f5f3; font: 700 82px Arial, Helvetica, sans-serif; letter-spacing: -3px; animation: float 5s ease-in-out infinite; }
     .subtitle { fill: #aeb8b6; font: 600 14px Arial, Helvetica, sans-serif; letter-spacing: 3px; }
-    .title-enter { animation: enter .65s ease-out both; }
-    .subtitle-enter { animation: enter .65s ease-out .15s both; }
-    .rule-enter { transform-origin: 480px 184px; animation: reveal .7s ease-out .3s both; }
-    @keyframes enter {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
+    .scanner { animation: scan 5s ease-in-out infinite alternate; }
+    .corners { animation: breathe 5s ease-in-out infinite; }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
     }
-    @keyframes reveal {
-      from { opacity: 0; transform: scaleX(0); }
-      to { opacity: 1; transform: scaleX(1); }
+    @keyframes scan {
+      from { transform: translateX(-96px); }
+      to { transform: translateX(96px); }
+    }
+    @keyframes breathe {
+      0%, 100% { opacity: .6; }
+      50% { opacity: 1; }
     }
     @media (prefers-reduced-motion: reduce) {
-      .title-enter, .subtitle-enter, .rule-enter { animation: none; }
+      .title, .scanner, .corners { animation: none; }
     }
   </style>
   <rect x="0.5" y="0.5" width="959" height="219" rx="23.5" fill="#0b1013" stroke="#303a3a"/>
-  <path d="M40 56V40h16 M904 40h16v16 M40 164v16h16 M904 180h16v-16" fill="none" stroke="#677471" stroke-width="1.5"/>
-  <text class="title title-enter" x="480" y="112" text-anchor="middle">APD Vision</text>
-  <text class="subtitle subtitle-enter" x="480" y="157" text-anchor="middle">WORKPLACE SAFETY MONITORING</text>
+  <path class="corners" d="M40 56V40h16 M904 40h16v16 M40 164v16h16 M904 180h16v-16" fill="none" stroke="#677471" stroke-width="1.5"/>
+  <text class="title" x="480" y="112" text-anchor="middle">APD Vision</text>
+  <text class="subtitle" x="480" y="157" text-anchor="middle">WORKPLACE SAFETY MONITORING</text>
   <path d="M356 184h248" stroke="#303a3a" stroke-width="2"/>
-  <path class="rule-enter" d="M448 184h64" stroke="#f3f5f3" stroke-width="2"/>
+  <path class="scanner" d="M456 184h48" stroke="#f3f5f3" stroke-width="2"/>
 </svg>
