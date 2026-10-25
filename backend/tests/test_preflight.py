@@ -61,3 +61,26 @@ def test_preflight_blocks_when_key_missing(tmp_path: Path):
     failed_items = {r.item for r in results if r.status == "GAGAL"}
     assert "AGENT_HISTORY_KEY" in failed_items
     assert "COOKIE_SECURE" in failed_items
+
+
+def test_preflight_flags_key_that_is_not_valid_fernet(tmp_path: Path):
+    from cryptography.fernet import Fernet
+
+    env = tmp_path / ".env"
+    # 32 karakter: cukup untuk ambang lama, tetapi Fernet() menolaknya
+    # (kunci Fernet = 32 byte dalam url-safe base64 = 44 karakter).
+    env.write_text(
+        "DOMAIN=k3.example.com\n"
+        "CAMERA_SECRET_KEY=12345678901234567890123456789012\n"
+        "AGENT_HISTORY_KEY=secret-token-min-16-chars\n"
+    )
+    results = {r.item: r for r in run_checks(env_path=env)}
+    assert results["CAMERA_SECRET_KEY"].status != "OK"
+
+    env.write_text(
+        "DOMAIN=k3.example.com\n"
+        f"CAMERA_SECRET_KEY={Fernet.generate_key().decode()}\n"
+        "AGENT_HISTORY_KEY=secret-token-min-16-chars\n"
+    )
+    results = {r.item: r for r in run_checks(env_path=env)}
+    assert results["CAMERA_SECRET_KEY"].status == "OK"
