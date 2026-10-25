@@ -42,6 +42,19 @@ def _read_env_file(path: Path) -> dict[str, str]:
     return res
 
 
+def _is_valid_fernet_key(key: str) -> bool | None:
+    """True/False jika cryptography tersedia; None jika tidak bisa diuji."""
+    try:
+        from cryptography.fernet import Fernet
+    except ImportError:
+        return None
+    try:
+        Fernet(key.encode())
+    except Exception:
+        return False
+    return True
+
+
 def run_checks(env_path: Path | None = None) -> list[CheckResult]:
     results: list[CheckResult] = []
     root_dir = BASE_DIR.parent
@@ -69,10 +82,14 @@ def run_checks(env_path: Path | None = None) -> list[CheckResult]:
 
     # 3. CAMERA_SECRET_KEY
     cam_key = get_var("CAMERA_SECRET_KEY")
-    if len(cam_key) >= 32:
-        results.append(CheckResult("CAMERA_SECRET_KEY", "OK", f"Terisi ({len(cam_key)} karakter, format Fernet)", is_blocker=True))
-    elif cam_key:
-        results.append(CheckResult("CAMERA_SECRET_KEY", "PERINGATAN", "Terisi tetapi panjang kurang dari standar 44 karakter Fernet", is_blocker=False))
+    if cam_key:
+        fernet_ok = _is_valid_fernet_key(cam_key)
+        if fernet_ok is None:  # cryptography belum terpasang: jatuh ke cek panjang
+            fernet_ok = len(cam_key) >= 44
+        if fernet_ok:
+            results.append(CheckResult("CAMERA_SECRET_KEY", "OK", f"Terisi ({len(cam_key)} karakter, kunci Fernet valid)", is_blocker=True))
+        else:
+            results.append(CheckResult("CAMERA_SECRET_KEY", "PERINGATAN", "Terisi tetapi bukan kunci Fernet yang valid (harus 44 karakter url-safe base64, mis. hasil Fernet.generate_key()); Fernet() akan menolaknya saat mengenkripsi URL kamera", is_blocker=False))
     else:
         results.append(CheckResult("CAMERA_SECRET_KEY", "GAGAL", "Wajib diisi untuk enkripsi URL kamera sebelum deploy", is_blocker=True))
 
